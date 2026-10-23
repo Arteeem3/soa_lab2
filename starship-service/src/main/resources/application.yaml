@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: starship-service
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+server:
+  servlet:
+    context-path: /
+service1:
+  base-url: https://helios:21038/api/v1
+client:
+  ssl:
+    truststore: classpath:ssl/client-truststore.p12
+    truststore-password: password
+  http:
+    connect-timeout-ms: 3000
+    read-timeout-ms: 5000

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpaceMarine Command Center | SOA Lab 2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+<header class="navbar">
+    <div class="nav-brand">
+        <div class="brand-icon">⚔️</div>
+        <div class="brand-info">
+            <h1>SpaceMarine Command</h1>
+            <span class="badge badge-accent">SOA Lab #2</span>
+        </div>
+    </div>
+    <nav class="nav-tabs">
+        <button class="tab-btn active" id="tab-btn-marines" onclick="switchTab('marines')"><span>👥</span> Космодесантники</button>
+        <button class="tab-btn" id="tab-btn-starships" onclick="switchTab('starships')"><span>🚀</span> Операции кораблей</button>
+        <button class="tab-btn" id="tab-btn-analytics" onclick="switchTab('analytics')"><span>📊</span> Спец. запросы</button>
+    </nav>
+    <div class="nav-actions">
+        <button class="btn btn-secondary btn-sm" onclick="openModal('settings-modal')">⚙️ Настройки API</button>
+    </div>
+</header>
+
+<section class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-title">Всего десантников</div><div class="kpi-value" id="kpi-total-count">-</div><div class="kpi-desc">в базе сервиса 1</div></div>
+    <div class="kpi-card"><div class="kpi-title">Среднее здоровье</div><div class="kpi-value highlight-cyan" id="kpi-avg-health">-</div><div class="kpi-desc">GET /health/average</div></div>
+    <div class="kpi-card"><div class="kpi-title">Сервис 1 (Космодесант)</div><div class="kpi-value status-indicator" id="kpi-status-s1"><span class="dot dot-unknown"></span> Проверка...</div><div class="kpi-desc" id="kpi-url-s1">—</div></div>
+    <div class="kpi-card"><div class="kpi-title">Сервис 2 (Корабли)</div><div class="kpi-value status-indicator" id="kpi-status-s2"><span class="dot dot-unknown"></span> Проверка...</div><div class="kpi-desc" id="kpi-url-s2">—</div></div>
+</section>
+
+<main>
+
+<!-- ================= TAB 1 ================= -->
+<section id="tab-content-marines" class="tab-content active">
+    <div class="toolbar">
+        <div class="toolbar-left">
+            <button class="btn btn-primary" onclick="openCreateModal()"><span>➕</span> Создать десантника</button>
+            <button class="btn btn-secondary" onclick="toggleFiltersPanel()">🔍 Фильтры <span class="badge" id="active-filters-count" style="display:none">0</span></button>
+            <button class="btn btn-secondary" onclick="loadMarines()">🔄 Обновить</button>
+        </div>
+        <div class="toolbar-right">
+            <div class="search-box">
+                <input type="text" id="quick-search-substring" placeholder="Поиск по подстроке имени..." autocomplete="off">
+                <button class="btn btn-primary btn-sm" onclick="executeQuickSearch()">Найти</button>
+                <button class="btn btn-ghost btn-sm" id="btn-clear-search" onclick="clearQuickSearch()" style="display:none">✕</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="active-filters-chips" class="filter-chips" style="display:none"></div>
+
+    <div id="filter-panel" class="filter-panel" style="display:none">
+        <div class="filter-header"><h3>Фильтрация</h3><button class="btn btn-ghost btn-sm" onclick="resetFilters()">Сбросить всё</button></div>
+        <form id="filter-form" onsubmit="applyFilters(event)">
+            <div class="filter-grid">
+                <div class="form-group"><label>ID</label><input type="number" id="filter-id" name="id" placeholder="Точный ID"></div>
+                <div class="form-group"><label>Имя</label><input type="text" id="filter-name" name="name" placeholder="Точное значение"></div>
+                <div class="form-group"><label>Здоровье</label><input type="number" name="health" placeholder="Точное значение"></div>
+                <div class="form-group"><label>Сердец</label><select name="heartCount"><option value="">Любое</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+                <div class="form-group"><label>Координата X</label><input type="number" name="coordinates.x" placeholder="≤ 811"></div>
+                <div class="form-group"><label>Координата Y</label><input type="number" name="coordinates.y" placeholder="Целое"></div>
+                <div class="form-group"><label>Дата создания</label><input type="text" name="creationDate" placeholder="22.09.2026 12:00:00"></div>
+                <div class="form-group"><label>Дальнобойное оружие</label><select name="weaponType"><option value="">Любое</option><option>MELTAGUN</option><option>BOLT_PISTOL</option><option>COMBI_FLAMER</option><option>FLAMER</option><option>GRAV_GUN</option></select></div>
+                <div class="form-group"><label>Ближний бой</label><select name="meleeWeapon"><option value="">Любое</option><option>CHAIN_SWORD</option><option>POWER_SWORD</option><option>MANREAPER</option><option>LIGHTING_CLAW</option><option>POWER_FIST</option></select></div>
+                <div class="form-group"><label>Орден</label><input type="text" name="chapter.name" placeholder="Точное значение"></div>
+                <div class="form-group"><label>Легион</label><input type="text" name="chapter.parentLegion" placeholder="Точное значение"></div>
+                <div class="form-group"><label>Мир</label><input type="text" name="chapter.world" placeholder="Точное значение"></div>
+            </div>
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-primary">✓ Применить</button>
+                <button type="button" class="btn btn-secondary" onclick="resetFilters()">Сбросить</button>
+                <button type="button" class="btn btn-ghost" onclick="toggleFiltersPanel()">Скрыть</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-card">
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th onclick="handleSort('id')" class="sortable" id="th-id">ID <span class="sort-icon">↕</span></th>
+                        <th onclick="handleSort('name')" class="sortable" id="th-name">Имя <span class="sort-icon">↕</span></th>
+                        <th onclick="handleSort('coordinates.x')" class="sortable" id="th-coordinates-x">X <span class="sort-icon">↕</span></th>
+                        <th onclick="handleSort('coordinates.y')" class="sortable" id="th-coordinates-y">Y <span class="sort-icon">↕</span></th>
+                        <th onclick="handleSort('creationDate')" class="sortable" id="th-creationDate">Дата <span class="sort-icon">↕</span></th>
+                        <th onclick="handleSort('health')" class="sortable" id="th-health">Здоровье <span class="sort-icon">↕</span></th>
+                        <th onclick="handleSort('heartCount')" class="sortable" id="th-heartCount">Сердца <span class="sort-icon">↕</span></th>
+                        <th onclick="handleSort('weaponType')" class="sortable" id="th-weaponType">Оружие <span class="sort-icon">↕</span></th>
+                        <th onclick="handleSort('meleeWeapon')" class="sortable" id="th-meleeWeapon">Ближний <span class="sort-icon">↕</span></th>
+                        <th onclick="handleSort('chapter.name')" class="sortable" id="th-chapter-name">Орден <span class="sort-icon">↕</span></th>
+                        <th onclick="handleSort('chapter.parentLegion')" class="sortable" id="th-chapter-parentLegion">Легион <span class="sort-icon">↕</span></th>
+                        <th onclick="handleSort('chapter.world')" class="sortable" id="th-chapter-world">Мир <span class="sort-icon">↕</span></th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="marines-tbody"><tr><td colspan="13" class="table-placeholder">Загрузка...</td></tr></tbody>
+            </table>
+        </div>
+        <div class="pagination-bar">
+            <div class="pagination-info" id="pagination-info">Показано 0 из 0</div>
+            <div class="pagination-controls">
+                <label>Строк:</label>
+                <select id="page-size-select" onchange="changePageSize(this.value)"><option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option></select>
+                <button class="btn btn-secondary btn-sm" id="btn-first-page" onclick="goToPage(0)">«</button>
+                <button class="btn btn-secondary btn-sm" id="btn-prev-page" onclick="prevPage()">‹</button>
+                <div class="pagination-pages" id="pagination-pages"></div>
+                <button class="btn btn-secondary btn-sm" id="btn-next-page" onclick="nextPage()">›</button>
+                <button class="btn btn-secondary btn-sm" id="btn-last-page" onclick="goToLastPage()">»</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================= TAB 2 ================= -->
+<section id="tab-content-starships" class="tab-content">
+    <div class="starship-grid">
+        <div class="card operation-card">
+            <div class="card-header">
+                <div class="card-icon">🚀</div>
+                <div><h2>Высадка одного десантника</h2><p class="card-subtitle">POST /starship/{id}/unload/{mid}</p></div>
+            </div>
+            <form id="unload-single-form" onsubmit="handleUnloadSingle(event)">
+                <div class="form-group"><label>ID Корабля <span class="req">*</span></label><input type="number" id="single-starship-id" placeholder="Например: 1"></div>
+                <div class="form-group"><label>ID Космодесантника <span class="req">*</span></label><input type="number" id="single-marine-id" placeholder="Например: 42"></div>
+                <button type="submit" class="btn btn-primary btn-block">🚀 Высадить</button>
+            </form>
+        </div>
+        <div class="card operation-card">
+            <div class="card-header">
+                <div class="card-icon">🛸</div>
+                <div><h2>Высадка всех десантников</h2><p class="card-subtitle">POST /starship/{id}/unload-all</p></div>
+            </div>
+            <form id="unload-all-form" onsubmit="handleUnloadAll(event)">
+                <div class="form-group"><label>ID Корабля <span class="req">*</span></label><input type="number" id="all-starship-id" placeholder="Например: 1"></div>
+                <button type="submit" class="btn btn-accent btn-block">🛸 Высадить всех</button>
+            </form>
+        </div>
+    </div>
+    <div class="card terminal-card">
+        <div class="terminal-header">
+            <div class="terminal-title"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span>Журнал операций</span></div>
+            <button class="btn btn-ghost btn-sm" onclick="clearStarshipLogs()">Очистить</button>
+        </div>
+        <div class="terminal-body" id="starship-terminal-logs"><div class="log-entry log-info">[SYSTEM] Готов к работе.</div></div>
+    </div>
+</section>
+
+<!-- ================= TAB 3 ================= -->
+<section id="tab-content-analytics" class="tab-content">
+    <div class="analytics-grid">
+        <div class="card special-card">
+            <h3>1. Среднее здоровье</h3>
+            <p class="card-subtitle">GET /space-marines/health/average</p>
+            <p class="desc">Среднее значение поля health по всей базе.</p>
+            <div class="action-row">
+                <button class="btn btn-primary" onclick="calculateAverageHealth()">📊 Рассчитать</button>
+                <div class="result-badge" id="special-avg-health-result">-</div>
+            </div>
+        </div>
+        <div class="card special-card">
+            <h3>2. Поиск по подстроке</h3>
+            <p class="card-subtitle">GET /space-marines/search/by-name?substring={s}</p>
+            <p class="desc">Массив объектов, чьё имя содержит подстроку.</p>
+            <div class="input-action-row">
+                <input type="text" id="special-search-substring" placeholder="Подстрока">
+                <button class="btn btn-secondary" onclick="executeSpecialSearch()">🔍 Найти</button>
+            </div>
+            <div class="special-results-area" id="special-search-results"></div>
+        </div>
+        <div class="card special-card">
+            <h3>3. Health &gt; порога</h3>
+            <p class="card-subtitle">GET /space-marines/health/greater-than?threshold={v}</p>
+            <p class="desc">Десантники со здоровьем строго выше порога.</p>
+            <div class="input-action-row">
+                <input type="number" id="special-health-threshold" placeholder="Порог">
+                <button class="btn btn-secondary" onclick="executeSpecialHealthFilter()">≥ Отфильтровать</button>
+            </div>
+            <div class="special-results-area" id="special-health-results"></div>
+        </div>
+    </div>
+</section>
+
+</main>
+
+<!-- ================= MODAL: MARINE ================= -->
+<div id="marine-modal" class="modal-backdrop" style="display:none">
+    <div class="modal-dialog modal-lg" role="dialog" aria-modal="true">
+        <div class="modal-header">
+            <h2 id="modal-marine-title">Создание космодесантника</h2>
+            <button class="btn-close" type="button" onclick="closeModal('marine-modal')" aria-label="Закрыть">✕</button>
+        </div>
+        <form id="marine-form" onsubmit="handleMarineSubmit(event)" novalidate style="display:contents">
+            <input type="hidden" id="marine-form-id">
+            <div class="modal-body">
+
+                <div class="form-section">
+                    <div class="form-section-title">Основное</div>
+                    <div class="form-row">
+                        <div class="form-group" data-field="name" style="flex: 2 1 260px">
+                            <label for="m-name">Имя <span class="req">*</span></label>
+                            <input type="text" id="m-name" placeholder="Ультрамарин Тит" autocomplete="off">
+                            <span class="field-error">Укажите имя</span>
+                        </div>
+                        <div class="form-group" data-field="health" style="flex: 1 1 140px">
+                            <label for="m-health">Здоровье <span class="req">*</span></label>
+                            <input type="number" id="m-health" placeholder="100.0">
+                            <span class="field-hint">&gt; 0</span>
+                            <span class="field-error">Должно быть &gt; 0</span>
+                        </div>
+                        <div class="form-group" data-field="heartCount" style="flex: 1 1 140px">
+                            <label for="m-heart-count">Сердец <span class="opt">опц.</span></label>
+                            <input type="number" id="m-heart-count" placeholder="1–3">
+                            <span class="field-hint">Пусто или 1–3</span>
+                            <span class="field-error">От 1 до 3</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="form-section-title">Координаты</div>
+                    <div class="form-row">
+                        <div class="form-group" data-field="x" style="flex: 1 1 200px">
+                            <label for="m-coord-x">Координата X <span class="req">*</span></label>
+                            <input type="number" id="m-coord-x" placeholder="≤ 811">
+                            <span class="field-hint">Целое, не больше 811</span>
+                            <span class="field-error">Нужно целое ≤ 811</span>
+                        </div>
+                        <div class="form-group" data-field="y" style="flex: 1 1 200px">
+                            <label for="m-coord-y">Координата Y <span class="req">*</span></label>
+                            <input type="number" id="m-coord-y" placeholder="Любое целое">
+                            <span class="field-hint">Целое число</span>
+                            <span class="field-error">Обязательное целое</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="form-section-title">Вооружение</div>
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 1 1 200px">
+                            <label for="m-weapon">Дальнобойное <span class="req">*</span></label>
+                            <select id="m-weapon">
+                                <option value="MELTAGUN">MELTAGUN</option>
+                                <option value="BOLT_PISTOL">BOLT_PISTOL</option>
+                                <option value="COMBI_FLAMER">COMBI_FLAMER</option>
+                                <option value="FLAMER">FLAMER</option>
+                                <option value="GRAV_GUN">GRAV_GUN</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1 1 200px">
+                            <label for="m-melee-weapon">Ближний бой <span class="opt">опц.</span></label>
+                            <select id="m-melee-weapon">
+                                <option value="">— не указано —</option>
+                                <option value="CHAIN_SWORD">CHAIN_SWORD</option>
+                                <option value="POWER_SWORD">POWER_SWORD</option>
+                                <option value="MANREAPER">MANREAPER</option>
+                                <option value="LIGHTING_CLAW">LIGHTING_CLAW</option>
+                                <option value="POWER_FIST">POWER_FIST</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <fieldset class="form-fieldset">
+                    <legend>Орден (опционально)</legend>
+                    <p class="fieldset-hint">Заполните поля или оставьте пустыми. Если указан хотя бы один параметр — <strong>имя ордена обязательно</strong>.</p>
+                    <div class="form-row">
+                        <div class="form-group" data-field="chapterName" style="flex: 1 1 200px">
+                            <label for="m-chapter-name">Имя ордена</label>
+                            <input type="text" id="m-chapter-name" placeholder="Ultramarines" autocomplete="off">
+                            <span class="field-error">Обязательно, если указан другой параметр ордена</span>
+                        </div>
+                        <div class="form-group" style="flex: 1 1 200px">
+                            <label for="m-chapter-legion">Легион</label>
+                            <input type="text" id="m-chapter-legion" placeholder="Legion I" autocomplete="off">
+                        </div>
+                        <div class="form-group" style="flex: 1 1 200px">
+                            <label for="m-chapter-world">Родной мир</label>
+                            <input type="text" id="m-chapter-world" placeholder="Macragge" autocomplete="off">
+                        </div>
+                    </div>
+                </fieldset>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('marine-modal')">Отмена</button>
+                <button type="submit" class="btn btn-primary" id="btn-save-marine">💾 Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ================= MODAL: SETTINGS ================= -->
+<div id="settings-modal" class="modal-backdrop" style="display:none">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h2>Настройки подключения</h2>
+            <button class="btn-close" type="button" onclick="closeModal('settings-modal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Базовый URL Сервиса 1</label>
+                <input type="text" id="config-service1-url" placeholder="https://localhost:21038/api/v1">
+                <span class="field-hint">Порт 21038 (HTTPS)</span>
+            </div>
+            <div class="form-group" style="margin-top:14px">
+                <label>Базовый URL Сервиса 2</label>
+                <input type="text" id="config-service2-url" placeholder="https://localhost:21138/api/v1">
+                <span class="field-hint">Порт 21138 (HTTPS)</span>
+            </div>
+            <div class="config-presets">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="presetLocalhost()">📍 localhost</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="presetHelios()">🌐 helios.cs.ifmo.ru</button>
+            </div>
+            <div class="alert alert-info">
+                <strong>🔒 Самоподписанный сертификат</strong><br>
+                Если запросы падают с <em>Failed to fetch</em>, откройте ссылки и примите сертификат:
+                <ul>
+                    <li><a href="#" id="link-ssl-s1" target="_blank" class="link-ext">Сервис 1 ↗</a></li>
+                    <li><a href="#" id="link-ssl-s2" target="_blank" class="link-ext">Сервис 2 ↗</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="resetDefaultConfig()">По умолчанию</button>
+            <button type="button" class="btn btn-primary" onclick="saveConfigAndTest()">💾 Сохранить и проверить</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: spacemarine-service
+  datasource:
+    jndi-name: java:/PostgresDS
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: false
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+server:
+  servlet:
+    context-path: /
